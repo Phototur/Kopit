@@ -1,0 +1,47 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      KOPIT_SECURE_COOKIE: "1"
+      KOPIT_TIMEZONE: Europe/Moscow
+    volumes:
+      - kopit_data:/data
+    expose:
+      - "8000"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      KOPIT_DOMAIN: ${KOPIT_DOMAIN:?Set KOPIT_DOMAIN to your public DNS hostname}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+volumes:
+  kopit_data:
+  caddy_data:
+  caddy_config:
