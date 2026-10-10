@@ -119,5 +119,48 @@ class Envelopes(unittest.TestCase):
             finance.icon('<script>')
 
 
+class FirstRun(unittest.TestCase):
+    def setUp(self):
+        self.today = date(2026, 10, 10)
+        self.s = finance.initial(self.today)
+        self.p = dict(budget=17500000, total=30000000, balance=10000000, spent=7500000,
+                      reserve=17500000, goals=[dict(name='Отпуск', target=25000000, saved=8500000)],
+                      categories=[dict(name='Еда', limit=3500000), dict(name='Прочее', limit=None)])
+
+    def test_opening_balances_are_not_transactions(self):
+        finance.apply(self.s, 'onboarding', self.p, self.today)
+        self.assertTrue(self.s['onboarding_complete'])
+        self.assertEqual((self.s['balance'], self.s['reserve'], self.s['free']), (10000000, 17500000, 2500000))
+        self.assertEqual(self.s['transactions'], [])
+        self.assertEqual(finance.spent(self.s), 7500000)
+        self.assertEqual(self.s['goals'][0]['saved'], 8500000)
+        self.assertIsNone(self.s['categories'][1]['limit'])
+        # Income respects money already spent before joining, instead of refilling it.
+        finance.apply(self.s, 'income', dict(amount=1000000), self.today)
+        self.assertEqual((self.s['balance'], self.s['free']), (10000000, 3500000))
+        finance.rollover(self.s, date(2026, 11, 1))
+        self.assertEqual(finance.spent(self.s), 0)
+        self.assertEqual(self.s['balance'], 17500000)
+
+    def test_failed_setup_is_atomic_and_cannot_overwrite_existing_account(self):
+        for changes in [dict(total=100), dict(reserve=20000000), dict(categories=[dict(name='Еда', limit=20000000)])]:
+            before = copy.deepcopy(self.s)
+            with self.assertRaises(ValueError):
+                finance.apply(self.s, 'onboarding', {**self.p, **changes}, self.today)
+            self.assertEqual(self.s, before)
+        finance.apply(self.s, 'onboarding', self.p, self.today)
+        before = copy.deepcopy(self.s)
+        with self.assertRaises(ValueError):
+            finance.apply(self.s, 'onboarding', self.p, self.today)
+        self.assertEqual(self.s, before)
+
+    def test_existing_unmarked_account_is_protected(self):
+        self.s.pop('onboarding_complete')
+        finance.apply(self.s, 'income', dict(amount=100), self.today)
+        before = copy.deepcopy(self.s)
+        with self.assertRaises(ValueError):
+            finance.apply(self.s, 'onboarding', self.p, self.today)
+        self.assertEqual(self.s, before)
+
 if __name__ == '__main__':
     unittest.main()

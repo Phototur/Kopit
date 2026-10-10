@@ -17,7 +17,7 @@ declare u uuid := auth.uid(); r public.kopit_accounts; m text := to_char(now() a
 begin
  if u is null then raise exception 'Authentication required' using errcode='42501'; end if;
  insert into public.kopit_accounts(user_id,state) values (u,jsonb_build_object(
- 'month',m,'budget',17500000,'balance',0,'reserve',0,'free',0,
+ 'onboarding_complete',false,'month',m,'budget',17500000,'balance',0,'reserve',0,'free',0,
  'categories','[]'::jsonb,'transactions','[]'::jsonb,'checked_days','[]'::jsonb,
  'goals',jsonb_build_array(jsonb_build_object('id',gen_random_uuid()::text,'name','Ещё один месяц запаса','target',17500000,'saved',0,'reserve',true,'icon','reserve')),
  'reminders',jsonb_build_object('daily','21:00','day',1,'enabled',false),

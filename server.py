@@ -81,8 +81,8 @@ class Handler(BaseHTTPRequestHandler):
                     revision += 1
                     db.execute('UPDATE users SET state=?, revision=? WHERE id=?', (json.dumps(state), revision, user['id']))
                 return self.respond(200, dict(state=state, revision=revision, email=user['email']))
-        files = {'/': ('index.html', 'text/html'), '/app.js': ('app.js', 'text/javascript'), '/demo.js': ('demo.js', 'text/javascript'), '/style.css': ('style.css', 'text/css')}
-        for name in ('budget','categories','reserve','allocation','goals','daily'):
+        files = {'/': ('index.html', 'text/html'), '/app.js': ('app.js', 'text/javascript'), '/demo.js': ('demo.js', 'text/javascript'), '/finance-engine.js': ('finance-engine.js', 'text/javascript'), '/style.css': ('style.css', 'text/css')}
+        for name in ('setup','budget','categories','reserve','allocation','goals','daily'):
             files[f'/tutorial-{name}.png'] = (f'tutorial-{name}.png', 'image/png')
         if path not in files:
             return self.respond(404, {'error': 'Страница не найдена.'})

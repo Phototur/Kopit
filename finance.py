@@ -11,7 +11,7 @@ def uid():
 def initial(today=None):
     today = today or date.today()
     return dict(month=today.strftime('%Y-%m'), budget=17500000, balance=0,
-                reserve=0, free=0, categories=[], transactions=[],
+                reserve=0, free=0, categories=[], transactions=[], onboarding_complete=False,
                 goals=[dict(id=uid(), name='Ещё один месяц запаса', target=17500000,
                             saved=0, reserve=True)],
                 reminders=dict(daily='21:00', day=1, enabled=False))
@@ -36,7 +36,7 @@ def icon(value):
 
 
 def spent(s):
-    return sum(t['amount'] for t in s['transactions'] if t['kind'] == 'expense' and t['date'].startswith(s['month']))
+    return (s.get('opening', {}).get('spent', 0) if s.get('opening', {}).get('month') == s['month'] else 0) + sum(t['amount'] for t in s['transactions'] if t['kind'] == 'expense' and t['date'].startswith(s['month']))
 
 
 def topup(s):
@@ -77,7 +77,23 @@ def find(items, ident):
 def apply(s, action, p, today=None):
     today = today or date.today()
     rollover(s, today)
-    if action == 'daily_expenses':
+    if action == 'onboarding':
+        if s.get('onboarding_complete') or s['transactions'] or s['categories'] or any(s[k] for k in ('balance', 'reserve', 'free')) or any(g['saved'] or not g.get('reserve') for g in s['goals']):
+            raise ValueError('Начальная настройка уже выполнена. Измените данные в настройках.')
+        budget = amount(p.get('budget'))
+        total, balance, prior, reserve = (amount(p.get(k), True) for k in ('total', 'balance', 'spent', 'reserve'))
+        if balance > budget or balance + reserve > total or reserve > budget:
+            raise ValueError('Проверьте сумму резерва и доступные деньги.')
+        if any(not isinstance(p.get(k), list) or len(p[k]) > 100 for k in ('goals', 'categories')):
+            raise ValueError('Не больше 100 целей и категорий.')
+        goals = [dict(id=uid(), name=title(g.get('name')), target=amount(g.get('target')), saved=amount(g.get('saved'), True), reserve=bool(g.get('reserve')), icon=icon(g.get('icon', 'star'))) for g in p['goals']]
+        if sum(g['reserve'] for g in goals) > 1 or any(g['reserve'] and g['target'] != budget for g in goals):
+            raise ValueError('Цель запаса должна соответствовать бюджету месяца.')
+        categories = [dict(id=uid(), name=title(c.get('name')), limit=None if c.get('limit') is None else amount(c['limit'], True), tags=[], icon=icon(c.get('icon', 'star'))) for c in p['categories']]
+        if sum(c['limit'] or 0 for c in categories) > budget:
+            raise ValueError('Сумма лимитов категорий превышает месячный бюджет.')
+        s.update(budget=budget, balance=balance, reserve=reserve, free=total-balance-reserve, goals=goals, categories=categories, opening=dict(month=s['month'], spent=prior), onboarding_complete=True)
+    elif action == 'daily_expenses':
         entries = p.get('entries', [])
         if not isinstance(entries, list) or len(entries) > 100:
             raise ValueError('Не больше 100 расходов за один раз.')

@@ -42,8 +42,28 @@ try:
   db['state']=page.evaluate('KopitFinance.initial(dateKey())')
   page.get_by_label('Электронная почта').fill('test@example.com');page.get_by_label('Пароль',exact=True).fill('test-password')
   page.get_by_role('button',name='Войти',exact=True).click()
-  expect(page.locator('.hero .big')).to_have_text('0 ₽')
-  page.get_by_role('button',name='+ Добавить доход',exact=True).click();page.get_by_label('Сумма, ₽',exact=True).fill('375000');page.locator('#submit-modal').click()
+  expect(page.get_by_role('heading',name='Настроим ваш бюджет')).to_be_visible()
+  page.get_by_role('button',name='Начать',exact=True).click()
+  page.screenshot(path='web/tutorial-setup.png',full_page=True)
+  # Drafts do not touch remote state; invalid values stay on the current question.
+  page.locator('#setup-value').fill('0');page.locator('#setup-next').click();expect(page.locator('#setup-error')).to_contain_text('больше нуля');assert revision[0]==0
+  page.locator('#setup-value').fill('175000');page.locator('#setup-next').click()
+  page.locator('#setup-value').fill('350000');page.locator('#setup-next').click()
+  page.locator('#setup-value').fill('400000');page.locator('#setup-next').click();expect(page.locator('#setup-error')).to_contain_text('не должен превышать')
+  page.locator('#setup-value').fill('175000');page.locator('#setup-next').click()
+  page.locator('#setup-value').fill('0');page.locator('#setup-next').click()
+  expect(page.locator('#setup-value')).to_have_value('175000');page.locator('#setup-next').click()
+  page.locator('#setup-value').fill('45000');page.locator('#setup-next').click()
+  page.get_by_role('button',name='+ Добавить цель',exact=True).click();page.get_by_label('Название цели',exact=True).fill('Отпуск');page.locator('#setup-next').click();page.locator('#setup-value').fill('250000');page.locator('#setup-next').click();page.locator('#setup-value').fill('85000');page.locator('#setup-next').click();page.locator('#setup-next').click()
+  page.get_by_role('button',name='+ Добавить категорию',exact=True).click();page.get_by_label('Название категории',exact=True).fill('Еда');page.locator('#setup-next').click();page.locator('#setup-value').fill('35000');page.locator('#setup-next').click()
+  page.get_by_role('button',name='+ Добавить категорию',exact=True).click();page.get_by_label('Название категории',exact=True).fill('Прочее');page.locator('#setup-next').click();page.locator('#setup-next').click();page.locator('#setup-next').click()
+  expect(page.get_by_role('heading',name='Проверьте начальные данные')).to_be_visible();assert revision[0]==0
+  page.get_by_role('button',name='Назад',exact=True).click();expect(page.get_by_role('heading',name='На что обычно тратите?')).to_be_visible();page.locator('#setup-next').click();assert len(db['state']['categories'])==0
+  stale[0]=True;page.get_by_role('button',name='Сохранить и начать').click();expect(page.locator('#setup-error')).to_contain_text('другом устройстве');assert not db['state']['onboarding_complete'];expect(page.get_by_role('button',name='Сохранить и начать')).to_be_enabled()
+  page.get_by_role('button',name='Сохранить и начать').click();expect(page.locator('.hero .big')).to_have_text('175 000 ₽')
+  assert db['state']['onboarding_complete'] and len(db['state']['transactions'])==0 and len(db['state']['categories'])==2 and db['state']['categories'][1]['limit'] is None
+  assert db['state']['goals'][1]['saved']==8500000 and revision[0]==1
+  page.get_by_role('button',name='+ Добавить доход',exact=True).click();page.get_by_label('Сумма, ₽',exact=True).fill('25000');page.locator('#submit-modal').click()
   expect(page.locator('.hero .big')).to_have_text('175 000 ₽');assert db['state']['reserve']==17500000 and db['state']['free']==2500000
   page.reload();expect(page.locator('.hero .big')).to_have_text('175 000 ₽')
   # A separate device session reads the same remote state.
@@ -58,6 +78,13 @@ try:
   page.get_by_role('button',name='Обзор',exact=True).click();page.screenshot(path='/tmp/kopit-cloud-iphone.png',full_page=True)
   # Recovery callback tokens must be consumed and removed even with app's history() function.
   recovery=browser.new_context();recovery.route('https://*.supabase.co/**',route);rp=recovery.new_page();rp.goto(base+'#access_token=test-access&refresh_token=test-refresh&type=recovery&expires_in=3600');expect(rp.get_by_role('heading',name='Новый пароль')).to_be_visible();assert rp.evaluate('location.hash')=='';rp.get_by_label('Пароль',exact=True).fill('new-password');rp.get_by_role('button',name='Сохранить пароль').click();expect(rp.locator('.hero .big')).to_have_text('175 000 ₽')
+  demo=browser.new_context(viewport={'width':320,'height':700},is_mobile=True,has_touch=True).new_page()
+  demo.goto(base.replace('/docs/app/','/docs/')+'?setup=1');demo.get_by_role('button',name='Начать',exact=True).click()
+  for v in ['175000','300000','100000','75000','175000','0']:
+   demo.locator('#setup-value').fill(v);demo.locator('#setup-next').click()
+   assert demo.evaluate('document.documentElement.scrollWidth<=innerWidth')
+  demo.locator('#setup-next').click();demo.locator('#setup-next').click();demo.get_by_role('button',name='Сохранить и начать').click();expect(demo.locator('.hero .big')).to_have_text('100 000 ₽')
+  demo.get_by_role('button',name='+ Добавить доход',exact=True).click();demo.get_by_label('Сумма, ₽',exact=True).fill('10000');demo.locator('#submit-modal').click();expect(demo.locator('.hero .big')).to_have_text('100 000 ₽');assert demo.evaluate('state.free')==3500000
   assert not errors,errors
   browser.close();print('Cloud HTTP mock passed: login, remote save, reload, second device, revision conflict, recovery callback, six screens at 320/375/390/430px.')
 finally:

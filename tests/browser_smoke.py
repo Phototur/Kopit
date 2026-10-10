@@ -33,6 +33,14 @@ with tempfile.TemporaryDirectory() as tmp:
             page.get_by_label('Электронная почта').fill('browser@example.com')
             page.get_by_label('Пароль', exact=True).fill('browser-test-password')
             page.get_by_role('button', name='Создать аккаунт', exact=True).click()
+            page.get_by_role('button',name='Начать',exact=True).click()
+            page.locator('#setup-next').click()  # Default monthly budget
+            for _ in range(5):  # total, balance, spent, reserve, second-month goal
+                page.locator('#setup-value').fill('0')
+                page.locator('#setup-next').click()
+            page.locator('#setup-next').click()  # No additional goals
+            page.locator('#setup-next').click()  # No categories yet
+            page.get_by_role('button',name='Сохранить и начать').click()
             expect(page.get_by_role('heading',name='Всё под контролем.')).to_be_visible()
             page.get_by_role('button',name='+ Добавить доход',exact=True).click()
             page.get_by_label('Сумма, ₽',exact=True).fill('375000')

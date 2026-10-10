@@ -4,8 +4,9 @@ let demoState;
 const demoId = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 function demoInitial() {
   const today = dateKey();
+  if(new URLSearchParams(location.search).get("setup")==="1")return KopitFinance.initial(today);
   return {
-    month: today.slice(0, 7), budget: 17500000, balance: 14350000,
+    onboarding_complete:true, month: today.slice(0, 7), budget: 17500000, balance: 14350000,
     reserve: 17500000, free: 2500000,
     categories: [
       {id:'housing', name:'Жильё', limit:6000000, tags:['Аренда','Коммунальные']},
@@ -31,6 +32,7 @@ function demoApi(path,p) {
   if (!demoState) demoState=demoInitial();
   if (path==='state') return {state:structuredClone(demoState),revision:0,email:'Демонстрация · без аккаунта'};
   if(path!=='action') throw Error('В деморежиме аккаунт не нужен.');
+  if(p.action==='onboarding'){demoState=KopitFinance.apply(demoState,p,dateKey());return {state:structuredClone(demoState),revision:0,email:'Демонстрация · без аккаунта'};}
   if(p.action==='daily_expenses') {
     const backup=structuredClone(demoState);
     try {
@@ -45,7 +47,7 @@ function demoApi(path,p) {
   const find=(items,id)=>{const x=items.find(i=>i.id===id);if(!x)throw Error('Запись не найдена.');return x;};
   const amount=(v,zero=false)=>{if(!Number.isSafeInteger(v)||v<(zero?0:1)||v>100000000000)throw Error('Укажите корректную сумму.');return v;};
   const title=v=>{if(typeof v!=='string'||!v.trim()||v.trim().length>60)throw Error('Название должно содержать от 1 до 60 символов.');return v.trim();};
-  const spent=()=>s.transactions.filter(t=>t.kind==='expense'&&t.date.startsWith(s.month)).reduce((a,t)=>a+t.amount,0);
+  const spent=()=>((s.opening?.month===s.month?s.opening.spent:0)||0)+s.transactions.filter(t=>t.kind==='expense'&&t.date.startsWith(s.month)).reduce((a,t)=>a+t.amount,0);
   const topup=()=>{let n=Math.min(s.free,Math.max(0,s.budget-s.balance-spent()));s.balance+=n;s.free-=n;n=Math.min(s.free,Math.max(0,s.budget-s.reserve));s.reserve+=n;s.free-=n;};
   const record=(kind,value,extra={})=>s.transactions.push({id:demoId(),kind,amount:value,date:p.date||dateKey(),...extra});
   switch(p.action){
