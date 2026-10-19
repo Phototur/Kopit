@@ -143,7 +143,7 @@
       let response;try{response=await fetch(c.url+'/auth/v1/user',{method:'PUT',headers:{apikey:c.key,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({password:p.password}),credentials:'omit'});}catch{throw Error('Нет соединения. Пароль не изменён.');}
       if(!response.ok)throw Error('Не удалось изменить пароль. Откройте новую ссылку восстановления.');recovery=false;return {ok:true};
     }
-    if(path==='logout'){await request('/auth/v1/logout',{},await access());epoch++;keep(null);last=null;owner=null;uncertain=false;return {ok:true};}
+    if(path==='logout'){try{const registration=await navigator.serviceWorker?.getRegistration(new URL('./',location.href).href);const subscription=await registration?.pushManager.getSubscription();if(subscription){await request('/rest/v1/rpc/kopit_push_unsubscribe',{p_endpoint:subscription.endpoint},await access());await subscription.unsubscribe();}}catch{}await request('/auth/v1/logout',{},await access());epoch++;keep(null);last=null;owner=null;uncertain=false;return {ok:true};}
     if(recovery){const e=Error('Укажите новый пароль.');e.code='recovery_required';throw e;}
     if(path==='state'){
       const expected=epoch;
@@ -165,6 +165,10 @@
       rolled.changed=rolled.changed||upgraded.changed;
       if(rolled.changed){try{result=await save(rolled.state,result.revision);}catch(e){if(e.status!==409)throw e;throw Error('Данные изменились во время обновления. Перезагрузите страницу.');}}
       current(expected);result=latest(result);lastEmail=account.email;return {...result,email:lastEmail};
+    }
+    if(['push_key','push_subscribe','push_unsubscribe'].includes(path)){
+      const rpc={push_key:'kopit_push_public_key',push_subscribe:'kopit_push_subscribe',push_unsubscribe:'kopit_push_unsubscribe'}[path];
+      return request('/rest/v1/rpc/'+rpc,path==='push_subscribe'?{p_subscription:p.subscription}:path==='push_unsubscribe'?{p_endpoint:p.endpoint}:{},await access());
     }
     if(path==='action'){
       if(uncertain)throw uncertainSave();

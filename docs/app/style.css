@@ -80,3 +80,8 @@ body.keyboard-open .bottom-nav{display:none}body.keyboard-open main{padding-bott
 /* Approved brand mark: rounded savings loop with a separate dot. */
 .logo{display:inline-flex;align-items:center;gap:8px;flex-shrink:0;white-space:nowrap}.logo .brand-mark{display:block;width:32px;height:32px;flex-shrink:0}
 @media(max-width:360px){.logo{gap:6px}.logo .brand-mark{width:28px;height:28px}}
+.notification-actions{display:grid;gap:12px;margin:24px 0}
+.notification-actions button{min-height:48px;width:100%}
+#notification-invite{margin-top:28px}
+#notification-invite .actions{flex-wrap:wrap}
+#push-error{color:#8b342d;white-space:pre-wrap}
