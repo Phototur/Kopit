@@ -1,3 +1,2 @@
-// Public browser credentials; never put a secret/service_role key here.
 window.KOPIT_SUPABASE = true;
-window.KOPIT_SUPABASE_CONFIG = {url: 'https://uyiuqobwiwbhxkjpdmyu.supabase.co', key: 'sb_publishable_6zRwuKuOhv-AJQ5lbTZUlQ_mby3li-X'};
+window.KOPIT_SUPABASE_CONFIG = {"url": "https://uyiuqobwiwbhxkjpdmyu.supabase.co", "key": "sb_publishable_6zRwuKuOhv-AJQ5lbTZUlQ_mby3li-X", "server_commands": true};
