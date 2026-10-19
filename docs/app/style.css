@@ -76,3 +76,7 @@ body.keyboard-open .bottom-nav{display:none}body.keyboard-open main{padding-bott
 .daily-amount-row .daily-remove{grid-column:1/-1;justify-self:start;padding:8px 0;min-height:44px}
 #daily-add{width:100%;margin-top:16px}
 @media(max-width:360px){.daily-amount-row{grid-template-columns:minmax(0,1fr) 94px}}
+
+/* Approved brand mark: rounded savings loop with a separate dot. */
+.logo{display:inline-flex;align-items:center;gap:8px;flex-shrink:0;white-space:nowrap}.logo .brand-mark{display:block;width:32px;height:32px;flex-shrink:0}
+@media(max-width:360px){.logo{gap:6px}.logo .brand-mark{width:28px;height:28px}}

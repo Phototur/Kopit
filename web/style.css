@@ -182,3 +182,7 @@ nav.bottom-nav{position:fixed;z-index:20;left:50%;bottom:calc(16px + env(safe-ar
 /* First account setup: one question, large type, one primary action. */
 .setup{max-width:640px;margin:8px auto 40px}.setup h1{font-weight:800;font-size:clamp(32px,5vw,48px);line-height:1.1;outline:none}.setup-copy{font-size:18px;line-height:1.6}.setup-progress{height:4px;width:100%;margin:18px 0 22px;accent-color:#20251e}.setup-actions{display:flex;flex-direction:column;gap:12px;margin-top:26px}.setup-actions button{width:100%}.setup input{font-size:24px}.setup #setup-error{color:#a13126;min-height:24px}.setup-summary{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:15px 12px;padding:20px 0;border-top:1px solid #a7af9d}.setup-summary dt{font-size:15px}.setup-summary dd{margin:0;font-size:20px;font-weight:700;white-space:nowrap}.setup .row{align-items:center}.setup-save-note{margin-top:24px}.setup-list .quiet{flex-shrink:0;padding:8px}.setup-list .row strong{font-size:20px}.setup-list .row small{font-size:15px}
 @media(max-width:430px){.setup{margin-top:0}.setup-summary{grid-template-columns:1fr}.setup-summary dd{margin-bottom:6px}.setup h1{font-size:34px}}
+
+/* Approved brand mark: rounded savings loop with a separate dot. */
+.logo{display:inline-flex;align-items:center;gap:8px;flex-shrink:0;white-space:nowrap}.logo .brand-mark{display:block;width:32px;height:32px;flex-shrink:0}
+@media(max-width:360px){.logo{gap:6px}.logo .brand-mark{width:28px;height:28px}}

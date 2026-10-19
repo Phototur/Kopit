@@ -4,7 +4,7 @@ import shutil
 root = Path(__file__).resolve().parent
 out = root / 'docs' / 'app'
 out.mkdir(parents=True, exist_ok=True)
-for name in ['style.css', 'app.js', 'finance-engine.js', 'supabase-api.js', 'supabase-config.js', 'manifest.webmanifest', 'app-icon.png', 'app-icon-512.png']:
+for name in ['style.css', 'app.js', 'finance-engine.js', 'supabase-api.js', 'supabase-config.js', 'manifest.webmanifest', 'app-icon.png', 'app-icon-512.png', 'brand-icon.svg', 'favicon-32.png', 'favicon.ico', 'apple-touch-icon.png']:
     shutil.copyfile(root / 'web' / name, out / name)
 for path in (root / 'web').glob('tutorial-*.png'):
     shutil.copyfile(path, out / path.name)
