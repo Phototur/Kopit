@@ -224,6 +224,7 @@ function open(title,html,submit){
 }
 function openPage(kind,title,html,submit){
  if(pageFlow?.kind===kind&&$('#page-form'))return;
+ if(!modal.open){modal.append($('#modal-error'));$('#modal-body').replaceChildren();}
  const origin=pageFlow?.origin||page;pageFlow=null;page=kind;render();pageFlow={kind,origin};
  $('#content').innerHTML=`<section class="page-flow"><button type="button" class="quiet flow-back" id="flow-back">← Назад</button><h1 tabindex="-1">${esc(title)}</h1><form id="page-form" novalidate>${html}<p id="flow-error" role="alert"></p><div class="form-actions"><button type="button" id="flow-cancel">Отмена</button><button type="submit" id="flow-submit" class="primary">Сохранить</button></div></form></section>`;
  const selected=['home','goals','history'].includes(origin)?origin:'home';document.querySelectorAll('.bottom-nav [data-page]').forEach(b=>{const active=b.dataset.page===selected;b.classList.toggle('active',active);if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
@@ -234,7 +235,7 @@ function openPage(kind,title,html,submit){
 }
 function setFlowBusy(busy){
  if(!pageFlow)return;
- if(busy){pageFlow.controls=[...document.querySelectorAll('#header-tools button,.bottom-nav button,#flow-back,#flow-cancel')].map(el=>({el,disabled:el.disabled}));pageFlow.fields=[...document.querySelectorAll('#page-form input')].map(el=>({el,readOnly:el.readOnly}));for(const x of pageFlow.controls)x.el.disabled=true;for(const x of pageFlow.fields)x.el.readOnly=true;}
+ if(busy){pageFlow.controls=[...document.querySelectorAll('#header-tools button,.bottom-nav button,#page-form button:not(#flow-submit):not(#daily-zero),#page-form select')].map(el=>({el,disabled:el.disabled}));pageFlow.fields=[...document.querySelectorAll('#page-form input')].map(el=>({el,readOnly:el.readOnly}));for(const x of pageFlow.controls)x.el.disabled=true;for(const x of pageFlow.fields)x.el.readOnly=true;}
  else{for(const x of pageFlow.controls||[])x.el.disabled=x.disabled;for(const x of pageFlow.fields||[])x.el.readOnly=x.readOnly;}
 }
 const amountField=(value='')=>`<label for="amount">Сумма, ₽</label><input id="amount" type="text" inputmode="decimal" maxlength="32" value="${value}" required autofocus>`;
@@ -251,7 +252,7 @@ function dateTiles(id){
 }
 function categoryTiles(select){
  const strip=document.createElement('div');strip.className='category-strip';strip.setAttribute('aria-label','Выбор категории');select.after(strip);select.classList.add('native-choice');
- const draw=()=>{strip.replaceChildren();for(const option of select.options){if(!option.value)continue;const c=state.categories.find(c=>c.id===option.value);if(!c)continue;const b=document.createElement('button');b.type='button';b.className='category-tile';b.setAttribute('aria-pressed',String(select.value===c.id));b.innerHTML=pictogram(itemIcon(c))+`<span>${esc(c.name)}</span>`;b.onclick=()=>{select.value=c.id;select.dispatchEvent(new Event('change',{bubbles:true}));};strip.append(b);}};select.addEventListener('change',draw);draw();
+ const draw=()=>{strip.replaceChildren();for(const option of select.options){if(!option.value)continue;const c=state.categories.find(c=>c.id===option.value);if(!c)continue;const b=document.createElement('button');b.type='button';b.className='category-tile';b.setAttribute('aria-pressed',String(select.value===c.id));b.innerHTML=`<span class="category-circle">${pictogram(itemIcon(c))}</span><span class="category-label">${esc(c.name)}</span>`;b.onclick=()=>{select.value=c.id;select.dispatchEvent(new Event('change',{bubbles:true}));};strip.append(b);}};select.addEventListener('change',draw);draw();
 }
 function tagPicker(root,initial=[]){
  let selected=[...new Set(initial)],created=[];
@@ -261,9 +262,9 @@ function tagPicker(root,initial=[]){
 }
 function expense(details=false,draft={}){
  if(!state.categories.some(c=>!c.archived)){categoryForm(null,id=>expense(details,{...draft,category:id}));return;}
- open(details?'Заменить часть начальных расходов':'Записать расход',amountField(draft.amount||'')+`${details?`<p class="note">Запись заменит часть начальной суммы ${rub(state.opening?.month===state.month?state.opening.spent:0)} без повторного списания.</p>`:''}<label for="category">Категория</label><select id="category">${state.categories.filter(c=>!c.archived).map(c=>`<option value="${c.id}" ${draft.category===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select><button type="button" class="quiet" id="expense-add-category">+ Новая категория</button><label for="expense-date">Дата расхода</label><input id="expense-date" type="date" min="${state.month}-01" max="${dateKey()}" value="${esc(draft.date||dateKey())}" required><p class="muted">Доступны даты текущего месяца.</p><div id="expense-tags"></div>`,()=>{const entry={amount:money($('#amount').value),category:$('#category').value,tags:readTags()};return details?action('opening_details',{entries:[entry],date:$('#expense-date').value}):action('expense',{...entry,date:$('#expense-date').value});});
+ openPage('expense',details?'Заменить часть начальных расходов':'Записать расход',amountField(draft.amount||'')+`${details?`<p class="note">Запись заменит часть начальной суммы ${rub(state.opening?.month===state.month?state.opening.spent:0)} без повторного списания.</p>`:''}<label for="category">Категория</label><select id="category">${state.categories.filter(c=>!c.archived).map(c=>`<option value="${c.id}" ${draft.category===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select><button type="button" class="quiet" id="expense-add-category">+ Новая категория</button><label for="expense-date">Дата расхода</label><input id="expense-date" type="date" min="${state.month}-01" max="${dateKey()}" value="${esc(draft.date||dateKey())}" required><p class="muted">Доступны даты текущего месяца.</p><div id="expense-tags"></div>`,()=>{const entry={amount:money($('#amount').value),category:$('#category').value,tags:readTags()};return details?action('opening_details',{entries:[entry],date:$('#expense-date').value}):action('expense',{...entry,date:$('#expense-date').value});});
  const readTags=tagPicker($('#expense-tags'),Array.isArray(draft.tags)?draft.tags:[]);dateTiles('expense-date');categoryTiles($('#category'));
- $('#expense-add-category').onclick=()=>{const captured={amount:$('#amount').value,date:$('#expense-date').value,tags:readTags()};modal.addEventListener('close',()=>categoryForm(null,id=>expense(details,{...captured,category:id})),{once:true});modal.close();};
+ $('#expense-add-category').onclick=()=>{const captured={amount:$('#amount').value,date:$('#expense-date').value,tags:readTags()},origin=pageFlow.origin;categoryForm(null,id=>{pageFlow=null;page=origin;expense(details,{...captured,category:id});});};
 }
 function categoryForm(c,after){let saved=false;open(c?'Изменить категорию':'Новая категория',`<label for="name">Название</label><input id="name" maxlength="60" value="${esc(c?.name||'')}" required>${iconPicker(c)}<details ${c?.limit!=null?'open':''}><summary>Лимит — необязательно</summary><label for="limit">Месячный лимит, ₽</label><input id="limit" type="number" min="0" step="0.01" value="${c?.limit!=null?c.limit/100:''}" placeholder="Без лимита"></details>`,async()=>{const name=$('#name').value.trim();if(state.categories.some(item=>item.id!==c?.id&&item.name.toLocaleLowerCase()===name.toLocaleLowerCase()))throw Error('Категория с таким названием уже есть.');await action('category',{id:c?.id,name,icon:$('#icon-choice').value,limit:$('#limit').value===''?null:money($('#limit').value)});saved=true;});if(after)modal.addEventListener('close',()=>{if(saved)after(state.categories.at(-1).id);},{once:true});}
 function goalForm(g){
@@ -433,7 +434,7 @@ function drawSetup(){
 
 function fitVisibleViewport(){
  const v=window.visualViewport,height=v?.height||window.innerHeight,top=v?.offsetTop||0;
- document.documentElement.style.setProperty('--visual-height',height+'px');document.documentElement.style.setProperty('--visual-top',top+'px');
+ document.documentElement.style.setProperty('--keyboard-gap',Math.max(0,window.innerHeight-height)+'px');document.documentElement.style.setProperty('--visual-height',height+'px');document.documentElement.style.setProperty('--visual-top',top+'px');
  const editing=/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName||'');document.body.classList.toggle('keyboard-open',editing&&height<window.innerHeight-120);
  if(modal.open){modal.style.top=Math.max(top+8,top+height-modal.getBoundingClientRect().height-8)+'px';}
  const field=document.activeElement;if(!editing||field.type==='range'||field.type==='checkbox')return;

@@ -94,3 +94,19 @@ body.keyboard-open .bottom-nav{display:none}body.keyboard-open main{padding-bott
 .date-tile[aria-pressed=true],.category-tile[aria-pressed=true],.tag[aria-pressed=true]{background:var(--ink,#244e32);color:var(--paper,#fff);border-color:var(--ink,#244e32)}
 .field-title{margin:20px 0 12px}.tag-choices{display:flex;flex-wrap:wrap;gap:8px}.tag-choices .tag{min-height:44px;padding:10px 14px;border-radius:24px;max-width:100%;overflow-wrap:anywhere}.tag-create{display:flex;gap:8px;margin-top:12px;align-items:center}.tag-create input{flex:1;min-width:0;margin:0}.tag-create button{flex-shrink:0;min-height:46px;padding:10px}.tag-hint{font-size:12px;line-height:1.5}.daily-amount-row>div:first-child{min-width:0}.daily-tags{grid-column:1/-1;min-width:0}.daily-tags input{text-align:left}
 .daily-amount-row>div:first-child{grid-column:1/-1}.daily-amount-row>div:nth-child(2){grid-column:1/-1}.daily-amount-row>div:nth-child(2) input{text-align:left}.daily-amount-row .category-strip{width:100%}.date-tile[aria-pressed=true],.category-tile[aria-pressed=true],.tag[aria-pressed=true]{background:var(--action);color:white;border-color:var(--action)}
+
+/* Round category controls: icon and label are separate, names wrap at words. */
+.category-strip{gap:8px;align-items:flex-start;padding-block:4px 12px}
+.category-tile,.category-tile[aria-pressed=true]{flex:0 0 120px;min-height:0;padding:0 2px 4px;gap:10px;border:0;border-radius:0;background:transparent;color:var(--text);text-align:center}
+.category-tile .category-circle{display:grid;place-items:center;flex:0 0 60px;width:60px;height:60px;border:1px solid var(--line);border-radius:50%;background:var(--paper);color:var(--text)}
+.category-tile[aria-pressed=true] .category-circle{background:var(--action);color:white;border-color:var(--action)}
+.category-tile .category-label{display:block;width:100%;font-size:13px;line-height:1.4;white-space:normal;word-break:normal;overflow-wrap:anywhere;text-wrap:pretty}
+.category-tile[aria-pressed=true] .category-label{font-weight:650}
+.page-flow:has(#expense-tags) h1{margin-bottom:28px}
+.page-flow:has(#expense-tags) #amount{font-size:28px;min-height:64px;margin-bottom:24px}
+.page-flow:has(#expense-tags) #expense-add-category{display:block;margin:4px 0 24px;min-height:44px}
+.page-flow:has(#expense-tags) .field-title{margin-top:24px}
+.page-flow:has(#expense-tags) .tag-hint{max-width:36em;line-height:1.55;text-wrap:pretty}
+.page-flow:has(#expense-tags) .form-actions{margin-top:32px}
+
+body.keyboard-open main{padding-bottom:calc(32px + var(--keyboard-gap,0px))}
