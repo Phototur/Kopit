@@ -115,6 +115,19 @@ window.KopitFinance=(()=>{
   }
   return {state:s,changed};
  }
- function publicApply(input,p,today){if(window.KopitDesignRules?.handles(p.action))return window.KopitDesignRules.apply(input,p,today);if(input.manual_month_close&&input.month<today.slice(0,7)){if(!['allocate','goal','category','goal_order','appearance','reminders'].includes(p.action))throw Error('Сначала завершите предыдущий месяц.');const d=new Date(input.month+'-01T12:00:00');d.setMonth(d.getMonth()+1,0);today=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}return apply(input,p,today);}
+ function baseApply(input,p,today){if(window.KopitDesignRules?.handles(p.action))return window.KopitDesignRules.apply(input,p,today);if(input.manual_month_close&&input.month<today.slice(0,7)){if(!['allocate','goal','category','goal_order','appearance','reminders'].includes(p.action))throw Error('Сначала завершите предыдущий месяц.');const d=new Date(input.month+'-01T12:00:00');d.setMonth(d.getMonth()+1,0);today=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}return apply(input,p,today);}
+ function publicApply(input,p,today){
+  const s=structuredClone(input),h=s.household||{members:[],actors:{},owners:{}};
+  if(p.action==='household_member'){
+   if(typeof p.name!=='string'||!p.name.trim()||p.name.trim().length>60)throw Error('Имя должно содержать от 1 до 60 символов.');const name=p.name.trim(),id=p.id||newId();if(h.members.some(m=>m.id!==id&&m.name.toLocaleLowerCase()===name.toLocaleLowerCase()))throw Error('Участник с таким именем уже есть.');
+   if(p.id){const m=h.members.find(m=>m.id===id);if(!m)throw Error('Участник не найден.');m.name=name;}else{if(h.members.length>=30)throw Error('Можно добавить до 30 участников.');h.members.push({id,name});}s.household=h;return s;
+  }
+  if(p.actor_id!==undefined&&!h.members.some(m=>m.id===p.actor_id))throw Error('Выберите участника в настройках.');
+  if(p.owner_id!==undefined&&p.owner_id!==null&&!h.members.some(m=>m.id===p.owner_id))throw Error('Владелец цели не найден.');
+  const q={...p};delete q.actor_id;delete q.owner_id;const r=baseApply(s,q,today);
+  if(p.actor_id)for(const t of r.transactions)if(!input.transactions.some(old=>old.id===t.id))h.actors[t.id]=p.actor_id;
+  if(p.owner_id!==undefined){const id=p.id||r.goals.at(-1).id;if(p.owner_id===null)delete h.owners[id];else h.owners[id]=p.owner_id;}
+  if(input.household||p.actor_id||p.owner_id!==undefined)r.household=h;return r;
+ }
  return {initial,apply:publicApply,rollover,upgrade};
 })();
