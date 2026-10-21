@@ -110,3 +110,12 @@ body.keyboard-open .bottom-nav{display:none}body.keyboard-open main{padding-bott
 .page-flow:has(#expense-tags) .form-actions{margin-top:32px}
 
 body.keyboard-open main{padding-bottom:calc(32px + var(--keyboard-gap,0px))}
+
+/* Category grid: all choices visible, no horizontal carousel. */
+.category-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px 12px;overflow:visible;scroll-snap-type:none;margin:12px 0 16px;padding:4px 0 8px}
+.category-tile,.category-tile[aria-pressed=true]{width:100%;min-width:0;scroll-snap-align:none}
+.category-tile .category-circle,.category-tile[aria-pressed=true] .category-circle{position:relative;background:var(--category-bg,var(--soft));color:var(--category-ink,var(--action));border-color:transparent}
+.category-tile[aria-pressed=true] .category-circle{outline:2px solid var(--category-ink,var(--action));outline-offset:3px}
+.category-tile[aria-pressed=true] .category-circle:after{content:'✓';position:absolute;right:-4px;bottom:-2px;display:grid;place-items:center;width:20px;height:20px;background:var(--action);color:white;border:2px solid var(--paper);border-radius:50%;font-size:12px;font-weight:700}
+.category-color-picker{padding:0;border:0;margin:24px 0}.category-color-picker legend{padding:0;margin-bottom:12px;font-size:14px;font-weight:600}.color-options{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}.color-options button{justify-self:center;width:44px;height:44px;padding:0;display:grid;place-items:center;border:1px solid transparent;border-radius:50%;background:var(--category-bg);color:var(--category-ink)}.color-options button span{visibility:hidden;font-size:20px;font-weight:700}.color-options [aria-pressed=true]{outline:2px solid var(--category-ink);outline-offset:3px}.color-options [aria-pressed=true] span{visibility:visible}.category-color-picker p{font-size:12px;line-height:1.5;margin-top:16px}.category-mini{display:inline-grid;place-items:center;width:32px;height:32px;flex-shrink:0;border-radius:50%;background:var(--category-bg);color:var(--category-ink)}
+@media(max-width:359px){.category-strip{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 12px}}
