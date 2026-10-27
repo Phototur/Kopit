@@ -134,3 +134,5 @@ body.keyboard-open main{padding-bottom:calc(32px + var(--keyboard-gap,0px))}
 .goal-sort-row.is-holding{background:var(--soft)}.goal-sort-row.is-holding:after{content:'';position:absolute;left:0;bottom:0;height:3px;background:var(--action);border-radius:3px;animation:goal-hold-progress 2s linear forwards;pointer-events:none}
 @keyframes goal-hold-progress{from{width:0}to{width:100%}}
 @media(prefers-reduced-motion:reduce){.goal-sort-row.is-holding:after{animation:none;width:100%}}
+
+input[inputmode="decimal"]{font-size:16px;font-variant-numeric:tabular-nums;letter-spacing:.01em}input[inputmode="decimal"]::placeholder{color:var(--muted);opacity:.65}
