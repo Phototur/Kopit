@@ -146,10 +146,10 @@ function render(){
 }
 function ring(g,large=false){const percent=Math.max(0,Math.min(100,Math.round(g.saved/g.target*100)));return `<div class="ring ${large?'large-ring':''}" role="img" aria-label="Накоплено ${percent}%"><svg viewBox="0 0 44 44" aria-hidden="true"><circle class="track" cx="22" cy="22" r="18"/><circle class="fill" cx="22" cy="22" r="18" pathLength="100" stroke-dasharray="${percent} 100"/></svg><span>${percent}%</span></div>`;}
 let selectedGoal=null,goalOrigin='goals';
-function goalRows(){return visibleGoals().length?visibleGoals().map((g,i)=>`<div class="goal-sort-row" data-sort-id="${esc(g.id)}"><button class="goal-row" data-goal-detail="${esc(g.id)}">${ring(g)}<span class="grow"><strong>${esc(g.name)}</strong><small>${esc(goalOwner(g))}</small><small>${rub(g.saved)} из ${rub(g.target)}${g.completed?" · Завершена":""}</small></span></button><button type="button" class="goal-drag-handle" aria-label="Переместить цель ${esc(g.name)}" aria-describedby="goal-sort-help" aria-expanded="false" ${visibleGoals().length<2?'disabled':''}><span aria-hidden="true">⠿</span></button><div class="goal-move-actions" hidden><button type="button" data-goal-move="up" ${i===0?'disabled':''}>↑ Выше</button><button type="button" data-goal-move="down" ${i===visibleGoals().length-1?'disabled':''}>↓ Ниже</button></div></div>`).join(''):`<button class="add-row" id="empty-add-goal"><span class="plus-disc" aria-hidden="true">+</span><span><strong>Добавить цель</strong><small>На что хотите накопить?</small></span></button>`;}
-function bindGoalRows(){app.querySelectorAll('[data-goal-detail]').forEach(b=>b.onclick=()=>{selectedGoal=b.dataset.goalDetail;goalOrigin=page;goPage('detail');});if($('#empty-add-goal'))$('#empty-add-goal').onclick=()=>goalForm();}
+function goalRows(){return visibleGoals().length?visibleGoals().map(g=>`<div class="goal-sort-row" data-sort-id="${esc(g.id)}"><button type="button" class="goal-drag-handle" aria-label="Переместить цель ${esc(g.name)}" aria-describedby="goal-sort-help" ${visibleGoals().length<2?'disabled':''}><span aria-hidden="true">⠿</span></button><button class="goal-row" data-goal-detail="${esc(g.id)}">${ring(g)}<span class="grow"><strong>${esc(g.name)}</strong><small>${esc(goalOwner(g))}</small><small>${rub(g.saved)} из ${rub(g.target)}${g.completed?" · Завершена":""}</small></span></button><button type="button" class="goal-open" data-goal-open="${esc(g.id)}" aria-label="Открыть цель ${esc(g.name)}"><span aria-hidden="true">›</span></button></div>`).join(''):`<button class="add-row" id="empty-add-goal"><span class="plus-disc" aria-hidden="true">+</span><span><strong>Добавить цель</strong><small>На что хотите накопить?</small></span></button>`;}
+function bindGoalRows(){app.querySelectorAll('[data-goal-detail],[data-goal-open]').forEach(b=>b.onclick=()=>{selectedGoal=b.dataset.goalDetail||b.dataset.goalOpen;goalOrigin=page;goPage('detail');});if($('#empty-add-goal'))$('#empty-add-goal').onclick=()=>goalForm();}
 function bindGoalSorting(){
- const root=$('#goal-list');if(!root)return;let drag=null,saving=false,suppressClick=false;
+ const root=$('#goal-list');if(!root)return;let drag=null,saving=false,suppressUntil=0;
  const rows=()=>[...root.querySelectorAll('.goal-sort-row')],order=()=>rows().map(r=>r.dataset.sortId);
  const announce=text=>{if($('#goal-sort-status'))$('#goal-sort-status').textContent=text;};
  async function save(ids,focusId){
@@ -162,9 +162,9 @@ function bindGoalSorting(){
  function move(id,delta){if(saving||drag)return;const ids=order(),i=ids.indexOf(id),j=i+delta;if(i<0||j<0||j>=ids.length)return;[ids[i],ids[j]]=[ids[j],ids[i]];const nodes=new Map(rows().map(r=>[r.dataset.sortId,r]));ids.forEach(id=>root.append(nodes.get(id)));save(ids,id);}
  function finish(cancel=false){
   if(!drag)return;const d=drag;drag=null;clearTimeout(d.timer);cancelAnimationFrame(d.frame);window.removeEventListener('pointermove',onMove);window.removeEventListener('pointerup',onUp);window.removeEventListener('pointercancel',onCancel);window.removeEventListener('keydown',onKey);window.removeEventListener('blur',onCancel);
-  d.ghost?.remove();d.row.classList.remove('is-dragging');document.body.classList.remove('sorting-goals');if(!root.isConnected)return;
+  window.removeEventListener('touchmove',onTouchMove);window.removeEventListener('touchend',onTouchEnd);window.removeEventListener('touchcancel',onCancel);if(d.started)suppressUntil=Date.now()+400;d.ghost?.remove();d.row.classList.remove('is-dragging','is-holding');document.body.classList.remove('sorting-goals');if(!root.isConnected)return;
   if(cancel){const nodes=new Map(rows().map(r=>[r.dataset.sortId,r]));d.before.forEach(id=>root.append(nodes.get(id)));announce('Перемещение отменено');return;}
-  if(d.started){suppressClick=true;setTimeout(()=>suppressClick=false,0);const ids=order();if(ids.some((id,i)=>id!==d.before[i]))save(ids,d.row.dataset.sortId);else announce('Порядок не изменён');}
+  if(d.started){const ids=order();if(ids.some((id,i)=>id!==d.before[i]))save(ids,d.row.dataset.sortId);else announce('Порядок не изменён');}
  }
  function frame(){
   if(!drag?.started)return;const d=drag;if(!root.isConnected){finish(true);return;}
@@ -175,18 +175,30 @@ function bindGoalSorting(){
   d.frame=requestAnimationFrame(frame);
  }
  function start(){
-  if(!drag||drag.started)return;const d=drag,r=d.row.getBoundingClientRect();d.started=true;d.offset=Math.min(r.height,Math.max(0,d.startY-r.top));d.ghost=d.row.cloneNode(true);d.ghost.classList.add('goal-drag-ghost');d.ghost.setAttribute('aria-hidden','true');d.ghost.inert=true;d.ghost.style.cssText=`left:${r.left}px;top:${r.top}px;width:${r.width}px`;document.body.append(d.ghost);d.row.classList.add('is-dragging');document.body.classList.add('sorting-goals');announce('Перемещайте цель. Escape — отмена.');frame();
+  if(!drag||drag.started)return;const d=drag,r=d.row.getBoundingClientRect();d.row.classList.remove('is-holding');d.started=true;d.offset=Math.min(r.height,Math.max(0,d.startY-r.top));d.ghost=d.row.cloneNode(true);d.ghost.classList.add('goal-drag-ghost');d.ghost.setAttribute('aria-hidden','true');d.ghost.inert=true;d.ghost.style.cssText=`left:${r.left}px;top:${r.top}px;width:${r.width}px`;document.body.append(d.ghost);d.row.classList.add('is-dragging');document.body.classList.add('sorting-goals');announce('Перемещайте цель. Escape — отмена.');frame();
  }
- function onMove(e){if(!drag||e.pointerId!==drag.pointerId)return;e.preventDefault();drag.y=e.clientY;if(Math.abs(e.clientY-drag.startY)>6)start();}
+ function onMove(e){if(!drag||e.pointerId!==drag.pointerId)return;if(drag.whole&&!drag.started){if(Math.hypot(e.clientY-drag.startY,e.clientX-drag.startX)>8){suppressUntil=Date.now()+400;finish(true);}return;}e.preventDefault();drag.y=e.clientY;if(Math.abs(e.clientY-drag.startY)>6)start();}
  function onUp(e){if(drag&&e.pointerId===drag.pointerId)finish();}
  function onCancel(){finish(true);}
  function onKey(e){if(e.key==='Escape'){e.preventDefault();finish(true);}}
- root.querySelectorAll('.goal-drag-handle').forEach(handle=>{
-  const row=handle.closest('.goal-sort-row'),id=row.dataset.sortId;
-  handle.onpointerdown=e=>{if(saving||e.button!==0||rows().length<2)return;e.preventDefault();handle.focus({preventScroll:true});drag={row,pointerId:e.pointerId,startY:e.clientY,y:e.clientY,before:order(),started:false};drag.timer=setTimeout(start,180);window.addEventListener('pointermove',onMove,{passive:false});window.addEventListener('pointerup',onUp);window.addEventListener('pointercancel',onCancel);window.addEventListener('keydown',onKey);window.addEventListener('blur',onCancel);};
-  handle.onclick=()=>{if(suppressClick||saving)return;const actions=$('.goal-move-actions',row);actions.hidden=!actions.hidden;handle.setAttribute('aria-expanded',String(!actions.hidden));};
+ function begin(row,e,whole=false,touch=false){
+  if(saving||drag||rows().length<2||(!touch&&e.button!==0))return;
+  const point=touch?e.touches[0]:e;drag={row,pointerId:touch?point.identifier:e.pointerId,startX:point.clientX,startY:point.clientY,y:point.clientY,before:order(),started:false,whole};
+  if(whole)row.classList.add('is-holding');drag.timer=setTimeout(start,whole?2000:180);
+  if(touch){window.addEventListener('touchmove',onTouchMove,{passive:false});window.addEventListener('touchend',onTouchEnd);window.addEventListener('touchcancel',onCancel);}
+  else{window.addEventListener('pointermove',onMove,{passive:false});window.addEventListener('pointerup',onUp);window.addEventListener('pointercancel',onCancel);}
+  window.addEventListener('keydown',onKey);window.addEventListener('blur',onCancel);
+ }
+ function onTouchMove(e){if(!drag)return;const t=[...e.touches].find(t=>t.identifier===drag.pointerId);if(!t||e.touches.length!==1){finish(true);return;}if(!drag.started){if(Math.hypot(t.clientY-drag.startY,t.clientX-drag.startX)>8){suppressUntil=Date.now()+400;finish(true);}return;}e.preventDefault();drag.y=t.clientY;}
+ function onTouchEnd(e){if(drag&&[...e.changedTouches].some(t=>t.identifier===drag.pointerId))finish();}
+ root.addEventListener('click',e=>{if(drag?.started||Date.now()<suppressUntil){e.preventDefault();e.stopImmediatePropagation();}},{capture:true});
+ rows().forEach(row=>{
+  const handle=$('.goal-drag-handle',row),id=row.dataset.sortId;
+  handle.onpointerdown=e=>{if(e.button!==0)return;e.preventDefault();handle.focus({preventScroll:true});begin(row,e);};
   handle.onkeydown=e=>{if(['ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();move(id,e.key==='ArrowUp'?-1:1);}};
-  $('[data-goal-move="up"]',row).onclick=()=>move(id,-1);$('[data-goal-move="down"]',row).onclick=()=>move(id,1);
+  row.onpointerdown=e=>{if(e.target.closest('.goal-drag-handle')||e.pointerType==='touch')return;begin(row,e,true);};
+  row.addEventListener('touchstart',e=>{if(e.target.closest('.goal-drag-handle')||e.touches.length!==1)return;begin(row,e,true,true);},{passive:true});
+  row.oncontextmenu=e=>e.preventDefault();
  });
 }
 function categorySummary(records,limits=false){
@@ -215,7 +227,7 @@ function home(){
  if($('#close-month-start'))$('#close-month-start').onclick=()=>goPage('closing');$('#add-expense').disabled=!!pendingMonth();$('#add-income').disabled=!!pendingMonth();$('#add-expense').onclick=()=>expense();$('#add-income').onclick=income;if($('#allocate'))$('#allocate').onclick=allocate;if($('#overspent-budget'))$('#overspent-budget').onclick=budgetSheet;bindGoalRows();
 }
 function goals(){
- $('#content').innerHTML=`<div class="topline"><h1>Ваши цели</h1>${visibleGoals().length?'<button id="new-goal" class="icon-button" aria-label="Добавить цель">+</button>':''}</div><p class="muted" id="goal-sort-help">Выше в списке — выше приоритет. Зажмите ручку справа и перетащите цель. Нажатие на ручку откроет кнопки; на клавиатуре используйте ↑ и ↓.</p><div id="goal-list">${goalRows()}</div><p class="sr-only" id="goal-sort-status" role="status" aria-live="polite"></p><div class="row"><span>Доступно для целей</span><strong>${rub(state.free)}</strong></div>${canAllocate()?'<button id="allocate">Распределить →</button>':''}`;
+ $('#content').innerHTML=`<div class="topline"><h1>Ваши цели</h1>${visibleGoals().length?'<button id="new-goal" class="icon-button" aria-label="Добавить цель">+</button>':''}</div><p class="muted" id="goal-sort-help">Выше в списке — выше приоритет. Перетаскивайте за ручку слева или удерживайте строку 2 секунды. Справа — переход к цели. На ручке работают клавиши ↑ и ↓.</p><div id="goal-list">${goalRows()}</div><p class="sr-only" id="goal-sort-status" role="status" aria-live="polite"></p><div class="row"><span>Доступно для целей</span><strong>${rub(state.free)}</strong></div>${canAllocate()?'<button id="allocate">Распределить →</button>':''}`;
  if($('#new-goal'))$('#new-goal').onclick=()=>goalForm();if($('#allocate'))$('#allocate').onclick=allocate;bindGoalRows();bindGoalSorting();
 }
 function goalDetail(){
