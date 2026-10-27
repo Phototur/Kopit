@@ -146,8 +146,49 @@ function render(){
 }
 function ring(g,large=false){const percent=Math.max(0,Math.min(100,Math.round(g.saved/g.target*100)));return `<div class="ring ${large?'large-ring':''}" role="img" aria-label="Накоплено ${percent}%"><svg viewBox="0 0 44 44" aria-hidden="true"><circle class="track" cx="22" cy="22" r="18"/><circle class="fill" cx="22" cy="22" r="18" pathLength="100" stroke-dasharray="${percent} 100"/></svg><span>${percent}%</span></div>`;}
 let selectedGoal=null,goalOrigin='goals';
-function goalRows(){return visibleGoals().length?visibleGoals().map(g=>`<button class="goal-row" data-goal-detail="${esc(g.id)}">${ring(g)}<span class="grow"><strong>${esc(g.name)}</strong><small>${esc(goalOwner(g))}</small><small>${rub(g.saved)} из ${rub(g.target)}${g.completed?" · Завершена":""}</small></span><span aria-hidden="true">›</span></button>`).join(''):`<button class="add-row" id="empty-add-goal"><span class="plus-disc" aria-hidden="true">+</span><span><strong>Добавить цель</strong><small>На что хотите накопить?</small></span></button>`;}
+function goalRows(){return visibleGoals().length?visibleGoals().map((g,i)=>`<div class="goal-sort-row" data-sort-id="${esc(g.id)}"><button class="goal-row" data-goal-detail="${esc(g.id)}">${ring(g)}<span class="grow"><strong>${esc(g.name)}</strong><small>${esc(goalOwner(g))}</small><small>${rub(g.saved)} из ${rub(g.target)}${g.completed?" · Завершена":""}</small></span></button><button type="button" class="goal-drag-handle" aria-label="Переместить цель ${esc(g.name)}" aria-describedby="goal-sort-help" aria-expanded="false" ${visibleGoals().length<2?'disabled':''}><span aria-hidden="true">⠿</span></button><div class="goal-move-actions" hidden><button type="button" data-goal-move="up" ${i===0?'disabled':''}>↑ Выше</button><button type="button" data-goal-move="down" ${i===visibleGoals().length-1?'disabled':''}>↓ Ниже</button></div></div>`).join(''):`<button class="add-row" id="empty-add-goal"><span class="plus-disc" aria-hidden="true">+</span><span><strong>Добавить цель</strong><small>На что хотите накопить?</small></span></button>`;}
 function bindGoalRows(){app.querySelectorAll('[data-goal-detail]').forEach(b=>b.onclick=()=>{selectedGoal=b.dataset.goalDetail;goalOrigin=page;goPage('detail');});if($('#empty-add-goal'))$('#empty-add-goal').onclick=()=>goalForm();}
+function bindGoalSorting(){
+ const root=$('#goal-list');if(!root)return;let drag=null,saving=false,suppressClick=false;
+ const rows=()=>[...root.querySelectorAll('.goal-sort-row')],order=()=>rows().map(r=>r.dataset.sortId);
+ const announce=text=>{if($('#goal-sort-status'))$('#goal-sort-status').textContent=text;};
+ async function save(ids,focusId){
+  if(saving)return;saving=true;const queue=[...ids],merged=state.goals.map(g=>goalVisible(g)?queue.shift():g.id);
+  const controls=[...document.querySelectorAll('#goal-list button,#header-tools button,.bottom-nav button,#new-goal,#allocate')].map(el=>({el,disabled:el.disabled}));controls.forEach(x=>x.el.disabled=true);root.setAttribute('aria-busy','true');announce('Сохраняем порядок…');
+  try{await action('goal_order',{ids:merged});announce('Порядок целей сохранён');}
+  catch(e){if(page==='goals')goPage('goals');toast(e.message);}
+  finally{saving=false;controls.forEach(x=>{if(x.el.isConnected)x.el.disabled=x.disabled;});root.removeAttribute('aria-busy');[...document.querySelectorAll('.goal-sort-row')].find(r=>r.dataset.sortId===focusId)?.querySelector('.goal-drag-handle')?.focus({preventScroll:true});}
+ }
+ function move(id,delta){if(saving||drag)return;const ids=order(),i=ids.indexOf(id),j=i+delta;if(i<0||j<0||j>=ids.length)return;[ids[i],ids[j]]=[ids[j],ids[i]];const nodes=new Map(rows().map(r=>[r.dataset.sortId,r]));ids.forEach(id=>root.append(nodes.get(id)));save(ids,id);}
+ function finish(cancel=false){
+  if(!drag)return;const d=drag;drag=null;clearTimeout(d.timer);cancelAnimationFrame(d.frame);window.removeEventListener('pointermove',onMove);window.removeEventListener('pointerup',onUp);window.removeEventListener('pointercancel',onCancel);window.removeEventListener('keydown',onKey);window.removeEventListener('blur',onCancel);
+  d.ghost?.remove();d.row.classList.remove('is-dragging');document.body.classList.remove('sorting-goals');if(!root.isConnected)return;
+  if(cancel){const nodes=new Map(rows().map(r=>[r.dataset.sortId,r]));d.before.forEach(id=>root.append(nodes.get(id)));announce('Перемещение отменено');return;}
+  if(d.started){suppressClick=true;setTimeout(()=>suppressClick=false,0);const ids=order();if(ids.some((id,i)=>id!==d.before[i]))save(ids,d.row.dataset.sortId);else announce('Порядок не изменён');}
+ }
+ function frame(){
+  if(!drag?.started)return;const d=drag;if(!root.isConnected){finish(true);return;}
+  const top=document.querySelector('.header').getBoundingClientRect().bottom+28,bottom=window.innerHeight-(document.querySelector('.bottom-nav')?.getBoundingClientRect().height||0)-36;
+  if(d.y<top)window.scrollBy(0,-Math.min(12,(top-d.y)/4));else if(d.y>bottom)window.scrollBy(0,Math.min(12,(d.y-bottom)/4));
+  d.ghost.style.top=(d.y-d.offset)+'px';const target=rows().find(r=>r!==d.row&&d.y<r.getBoundingClientRect().top+r.getBoundingClientRect().height/2);
+  if(target){if(d.row.nextElementSibling!==target)root.insertBefore(d.row,target);}else if(d.row!==root.lastElementChild)root.append(d.row);
+  d.frame=requestAnimationFrame(frame);
+ }
+ function start(){
+  if(!drag||drag.started)return;const d=drag,r=d.row.getBoundingClientRect();d.started=true;d.offset=Math.min(r.height,Math.max(0,d.startY-r.top));d.ghost=d.row.cloneNode(true);d.ghost.classList.add('goal-drag-ghost');d.ghost.setAttribute('aria-hidden','true');d.ghost.inert=true;d.ghost.style.cssText=`left:${r.left}px;top:${r.top}px;width:${r.width}px`;document.body.append(d.ghost);d.row.classList.add('is-dragging');document.body.classList.add('sorting-goals');announce('Перемещайте цель. Escape — отмена.');frame();
+ }
+ function onMove(e){if(!drag||e.pointerId!==drag.pointerId)return;e.preventDefault();drag.y=e.clientY;if(Math.abs(e.clientY-drag.startY)>6)start();}
+ function onUp(e){if(drag&&e.pointerId===drag.pointerId)finish();}
+ function onCancel(){finish(true);}
+ function onKey(e){if(e.key==='Escape'){e.preventDefault();finish(true);}}
+ root.querySelectorAll('.goal-drag-handle').forEach(handle=>{
+  const row=handle.closest('.goal-sort-row'),id=row.dataset.sortId;
+  handle.onpointerdown=e=>{if(saving||e.button!==0||rows().length<2)return;e.preventDefault();handle.focus({preventScroll:true});drag={row,pointerId:e.pointerId,startY:e.clientY,y:e.clientY,before:order(),started:false};drag.timer=setTimeout(start,180);window.addEventListener('pointermove',onMove,{passive:false});window.addEventListener('pointerup',onUp);window.addEventListener('pointercancel',onCancel);window.addEventListener('keydown',onKey);window.addEventListener('blur',onCancel);};
+  handle.onclick=()=>{if(suppressClick||saving)return;const actions=$('.goal-move-actions',row);actions.hidden=!actions.hidden;handle.setAttribute('aria-expanded',String(!actions.hidden));};
+  handle.onkeydown=e=>{if(['ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();move(id,e.key==='ArrowUp'?-1:1);}};
+  $('[data-goal-move="up"]',row).onclick=()=>move(id,-1);$('[data-goal-move="down"]',row).onclick=()=>move(id,1);
+ });
+}
 function categorySummary(records,limits=false){
  const groups=new Map();
  if(limits)state.categories.filter(c=>!c.archived).forEach(c=>groups.set(c.id,{id:c.id,name:c.name,icon:itemIcon(c),limit:c.limit,total:0}));
@@ -174,14 +215,14 @@ function home(){
  if($('#close-month-start'))$('#close-month-start').onclick=()=>goPage('closing');$('#add-expense').disabled=!!pendingMonth();$('#add-income').disabled=!!pendingMonth();$('#add-expense').onclick=()=>expense();$('#add-income').onclick=income;if($('#allocate'))$('#allocate').onclick=allocate;if($('#overspent-budget'))$('#overspent-budget').onclick=budgetSheet;bindGoalRows();
 }
 function goals(){
- $('#content').innerHTML=`<div class="topline"><h1>Ваши цели</h1>${visibleGoals().length?'<button id="new-goal" class="icon-button" aria-label="Добавить цель">+</button>':''}</div>${goalRows()}<div class="row"><span>Доступно для целей</span><strong>${rub(state.free)}</strong></div>${canAllocate()?'<button id="allocate">Распределить →</button>':''}`;
- if($('#new-goal'))$('#new-goal').onclick=()=>goalForm();if($('#allocate'))$('#allocate').onclick=allocate;bindGoalRows();
+ $('#content').innerHTML=`<div class="topline"><h1>Ваши цели</h1>${visibleGoals().length?'<button id="new-goal" class="icon-button" aria-label="Добавить цель">+</button>':''}</div><p class="muted" id="goal-sort-help">Выше в списке — выше приоритет. Зажмите ручку справа и перетащите цель. Нажатие на ручку откроет кнопки; на клавиатуре используйте ↑ и ↓.</p><div id="goal-list">${goalRows()}</div><p class="sr-only" id="goal-sort-status" role="status" aria-live="polite"></p><div class="row"><span>Доступно для целей</span><strong>${rub(state.free)}</strong></div>${canAllocate()?'<button id="allocate">Распределить →</button>':''}`;
+ if($('#new-goal'))$('#new-goal').onclick=()=>goalForm();if($('#allocate'))$('#allocate').onclick=allocate;bindGoalRows();bindGoalSorting();
 }
 function goalDetail(){
  const g=state.goals.find(g=>g.id===selectedGoal);if(!g||!goalVisible(g)){goPage('goals');return;}
  const history=state.transactions.filter(t=>(t.goal_id?t.goal_id===g.id:t.goal_name===g.name)&&!t.reserve_transfer).slice().reverse();
- $('#content').innerHTML=`<div class="topline"><button class="quiet" id="goal-back">← Назад</button><button class="icon-button" id="goal-edit" aria-label="Редактировать цель">${pictogram('edit')}</button></div><div class="goal-detail"><h1>${esc(g.name)}</h1><p class="muted">${esc(goalOwner(g))}</p>${ring(g,true)}<div class="number">${rub(g.saved)}</div><p class="muted">из ${rub(g.target)}</p><p>${g.saved>=g.target?'Цель достигнута':'Осталось '+rub(g.target-g.saved)}</p>${supported('goal_metadata')?`<p class="muted">${g.deadline?`Срок: ${esc(g.deadline)}${g.deadline<dateKey()&&!g.completed?' · прошёл, измените или уберите его':''}`:'Без срока'}</p>${g.saved>=g.target||g.completed?'<button id="goal-complete">'+(g.completed?'Вернуть в активные':'Завершить цель')+'</button>':''}`:''}<button id="goal-topup" class="primary" ${canAllocate()&&!g.completed?'':'disabled'}>Пополнить</button><p class="muted">Доступно ${rub(state.free)}</p></div><h2>История цели</h2>${transactions(history)}${(state.goal_adjustments||[]).filter(e=>e.goal_id===g.id).map(e=>`<div class="row"><span>Корректировка · ${esc(e.date)}</span><span>${rub(e.before)} → ${rub(e.after)}</span></div>`).join('')}<button id="goal-spend" ${g.saved?'':'disabled'}>Расход из накоплений</button><details><summary>Приоритет цели</summary><div class="actions"><button id="goal-up" ${state.goals[0].id===g.id?'disabled':''}>Поднять</button><button id="goal-down" ${state.goals.at(-1).id===g.id?'disabled':''}>Опустить</button></div></details>`;
- for(const [id,delta] of [['goal-up',-1],['goal-down',1]])$('#'+id).onclick=async()=>{const b=$('#'+id);b.disabled=true;const ids=state.goals.map(item=>item.id),i=ids.indexOf(g.id);[ids[i],ids[i+delta]]=[ids[i+delta],ids[i]];try{await action('goal_order',{ids});}catch(e){toast(e.message);b.disabled=false;}};
+ $('#content').innerHTML=`<div class="topline"><button class="quiet" id="goal-back">← Назад</button><button class="icon-button" id="goal-edit" aria-label="Редактировать цель">${pictogram('edit')}</button></div><div class="goal-detail"><h1>${esc(g.name)}</h1><p class="muted">${esc(goalOwner(g))}</p>${ring(g,true)}<div class="number">${rub(g.saved)}</div><p class="muted">из ${rub(g.target)}</p><p>${g.saved>=g.target?'Цель достигнута':'Осталось '+rub(g.target-g.saved)}</p>${supported('goal_metadata')?`<p class="muted">${g.deadline?`Срок: ${esc(g.deadline)}${g.deadline<dateKey()&&!g.completed?' · прошёл, измените или уберите его':''}`:'Без срока'}</p>${g.saved>=g.target||g.completed?'<button id="goal-complete">'+(g.completed?'Вернуть в активные':'Завершить цель')+'</button>':''}`:''}<button id="goal-topup" class="primary" ${canAllocate()&&!g.completed?'':'disabled'}>Пополнить</button><p class="muted">Доступно ${rub(state.free)}</p></div><h2>История цели</h2>${transactions(history)}${(state.goal_adjustments||[]).filter(e=>e.goal_id===g.id).map(e=>`<div class="row"><span>Корректировка · ${esc(e.date)}</span><span>${rub(e.before)} → ${rub(e.after)}</span></div>`).join('')}<button id="goal-spend" ${g.saved?'':'disabled'}>Расход из накоплений</button>`;
+
  if($('#goal-complete'))$('#goal-complete').onclick=async()=>{try{await action('goal',{id:g.id,name:g.name,target:g.target,completed:!g.completed});}catch(e){toast(e.message);}};
  $('#goal-back').onclick=()=>goPage(goalOrigin);$('#goal-edit').onclick=()=>goalForm(g);$('#goal-spend').onclick=()=>goalExpense(g);
  $('#goal-topup').onclick=()=>open('Пополнить цель',`<p>${esc(g.name)} · доступно ${rub(state.free)}</p>`+amountField(),()=>action('allocate',{allocations:{[g.id]:money($('#amount').value)}}));
