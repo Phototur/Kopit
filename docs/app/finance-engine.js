@@ -28,12 +28,11 @@ window.KopitFinance=(()=>{
    if(p.action==='budget'){
     const value=amount(p.amount);if(s.categories.reduce((n,c)=>n+(c.limit||0),0)>value)throw Error('Сначала уменьшите лимиты категорий.');s.budget=value;
    }else if(p.action==='allocate'){
-    if(s.balance<0)throw Error('Сначала покройте перерасход текущего месяца.');
     if(!p.allocations||typeof p.allocations!=='object'||Array.isArray(p.allocations))throw Error('Некорректное распределение.');
     const reserve=amount(p.reserve_amount??0,true),entries=Object.entries(p.allocations),total=entries.reduce((n,[,v])=>n+amount(v,true),0)+reserve;
     if(!entries.length&&!reserve)throw Error('Некорректное распределение.');
     if(total>s.free)throw Error('Для распределения не хватает денег.');
-    if(s.reserve<s.budget||s.balance+spent()<s.budget)throw Error('Сначала обеспечьте текущий и следующий месяц.');
+    if(s.reserve<s.budget+Math.max(0,-s.balance)||s.balance+spent()<s.budget)throw Error('Сначала обеспечьте текущий и следующий месяц.');
     for(const [id,v] of entries){const g=s.goals.find(g=>g.id===id);if(!g)throw Error('Запись не найдена.');g.saved+=v;if(v)record('allocation',v,{goal_name:g.name,...(s.manual_month_close?{goal_id:g.id}:{})});}
     s.reserve+=reserve;if(reserve)record('allocation',reserve,{goal_name:'Резерв будущих зарплат',reserve_transfer:true});s.free-=total;
    }else if(p.action==='opening_set'||p.action==='opening_details'){
