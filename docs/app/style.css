@@ -164,3 +164,36 @@ button:disabled{opacity:1;color:var(--muted);background:var(--line);border-color
 @media(hover:hover) and (pointer:fine){
   .goal-sort-row:not(.is-dragging):hover,.menu-row:hover{background:var(--soft)}
 }
+
+/* Calm Balance: approved mobile composition, with categories on the home screen. */
+:root{font-size:15px;--radius-panel:20px;--radius-control:12px}
+.header{padding-inline:22px}.logo{font-size:23px;letter-spacing:-.8px}.logo:after{content:none}.logo .brand-mark{width:30px;height:30px}
+h1{font-size:24px;letter-spacing:-.6px;margin:8px 0 22px}h2{font-size:17px;letter-spacing:-.25px}
+.muted{font-size:13px}small{font-size:12px}
+.hero{padding:20px;border-radius:var(--radius-panel);margin-bottom:18px}.hero .big{font-size:38px;font-weight:650;letter-spacing:-1.1px;margin:8px 0 5px;line-height:1.2}.hero .muted{color:var(--muted)}
+.hero .guides{margin-top:18px;padding-top:14px}.hero .guides strong{font-size:18px}.hero .actions{gap:10px;margin-top:18px}.hero .actions button{font-size:14px}
+.home-funds{margin:4px 0 24px}.home-funds .reserve-summary{padding:12px 0;font-size:14px}
+.free-funds{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--paper);border-radius:14px;padding:14px 16px;margin-top:12px}
+.free-funds>div{min-width:0}.free-funds strong{display:block;font-size:21px;margin-top:3px;letter-spacing:-.3px}.free-funds .primary{flex-shrink:0;padding:10px 12px;font-size:13px;min-height:44px;margin:0}
+.category-overview{margin-top:24px}.category-overview>p.muted{margin:6px 0 8px}.category-summary-row{padding:12px 0}.category-summary-row .row{padding-bottom:6px}.category-summary-row .row>strong:last-child{flex-shrink:0;white-space:nowrap}.category-summary-row .item-heading{font-size:14px;font-weight:600;gap:8px}.category-summary-row small{font-size:12px}.category-summary-row progress{height:4px;margin-top:8px}.category-overview .category-mini{width:24px;height:24px;background:transparent}.category-overview .category-mini .pictogram{width:18px;height:18px}
+.bottom-nav{padding:10px 16px max(10px,env(safe-area-inset-bottom));gap:8px}.bottom-nav button{font-size:13px;min-height:44px}.bottom-nav .active{font-weight:600}
+.goals-summary{margin:0 0 18px}.goals-summary .number{font-size:34px;margin-top:6px}.goal-sort-disclosure{margin-bottom:12px}#goal-list{margin-top:20px}.goal-row{padding-block:12px}.goal-row .grow strong{font-size:14px}.goal-row .grow small{font-size:12px}.goal-sort-row{border-radius:0}.goal-sort-row .goal-open{font-size:24px}
+/* The month is a text control. Native month choices remain keyboard and screen-reader accessible. */
+.history-filters{display:flex;align-items:center;justify-content:space-between;gap:4px 12px;margin:0 0 16px}
+.history-month-control{display:flex;align-items:center;gap:2px;max-width:100%}.history-month-control .icon-button{flex:0 0 44px;min-width:44px}
+.history-month-control button:disabled{background:transparent;color:var(--muted);opacity:.45}
+.history-month-choice{position:relative;display:flex;align-items:center;justify-content:center;gap:3px;margin:0;min-height:44px;padding:6px 2px;white-space:nowrap;font-size:17px;font-weight:600;border-radius:6px;cursor:pointer}
+.history-month-choice .pictogram{width:16px;height:16px}.history-month-choice select#history-month{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;min-height:44px}
+.history-month-choice:focus-within{outline:3px solid var(--action);outline-offset:2px}
+.history-filters #history-member,.spending-statistics #stats-period{width:auto;min-width:0;max-width:100%;border:0;background:transparent;border-radius:0;min-height:44px;padding:8px 0;font-size:14px;color:var(--muted);cursor:pointer}
+.history-totals{border:0;background:var(--paper);padding:16px;border-radius:14px;margin-top:4px;gap:16px}.history-totals strong{font-size:22px;font-weight:600}
+.history-tabs{gap:8px;margin:18px 0 10px;padding-bottom:4px}.history-tabs button{border:0;border-radius:0;font-size:13px;padding:8px 2px;min-height:44px;color:var(--muted)}.history-tabs button[aria-selected=true]{background:transparent;color:var(--text);font-weight:650;box-shadow:inset 0 -2px 0 var(--action)}
+.history-summary{font-size:12px}.history-summary strong{font-size:14px}#history-list{padding-top:0;border-bottom:0}.history-day{font-weight:500;font-size:13px;margin-top:18px}#history-list .row{padding:12px 0}#history-list .row strong{font-size:14px;font-weight:600}#history-list .sum{font-size:14px;white-space:nowrap}.transaction-member{margin-top:3px}.expense-tags{gap:4px;margin-top:4px}.expense-tags .tag{font-size:11px;padding:2px 5px}
+.goal-allocation-history{margin:28px 0 0;padding-top:24px;border-top:1px solid var(--line)}.goal-allocation-history .number,.spending-statistics .number{display:block;font-size:26px;margin-top:8px}
+#history-opening-note:empty{display:none}
+@media(max-width:360px){.header{padding-inline:16px}.hero{padding:18px}.hero .big{font-size:34px}.free-funds{padding:12px;gap:8px}.free-funds .primary{font-size:12px;padding-inline:10px}.free-funds .muted{font-size:12px}.free-funds strong{font-size:20px}.history-month-choice{font-size:16px}.history-filters{gap:4px 8px}}
+
+.free-funds button#allocate.primary{background:var(--action);color:var(--paper);border-color:var(--action)}
+#history-list>.row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+#history-list>.row:has(>button.icon-button){grid-template-columns:minmax(0,1fr) auto 44px}
+#history-list>.row>div{min-width:0}#history-list>.row>button.icon-button{margin:0;width:44px;min-width:44px;padding:10px}
